@@ -57,25 +57,7 @@ namespace BepInEx.MultiFolderLoader
                 return;
             }
 
-            foreach (var dir in Directory.GetDirectories(modsBaseDirFull))
-            {
-                var dirName = Path.GetFileName(dir);
-                if (modDir.blockedMods != null && modDir.blockedMods.Contains(dirName))
-                {
-                    MultiFolderLoader.Logger.LogWarning(
-                        $"Skipping loading [{dirName}] because it's marked as disabled");
-                    continue;
-                }
-
-                if (modDir.enabledMods != null && !modDir.enabledMods.Contains(dirName))
-                {
-                    MultiFolderLoader.Logger.LogWarning(
-                        $"Skipping loading [{dirName}] because it's not enabled");
-                    continue;
-                }
-
-                AddMod(dir);
-            }
+            AddMod(modsBaseDirFull);
 
             // Also resolve assemblies like bepin does
             AppDomain.CurrentDomain.AssemblyResolve += ResolveModDirectories;
@@ -193,19 +175,10 @@ namespace BepInEx.MultiFolderLoader
 
         private static void AddMod(string dir)
         {
-            // TODO: Maybe add support for MonoModLoader as well?
-            var patchesDir = Path.Combine(dir, "patchers");
-            var pluginsDir = Path.Combine(dir, "plugins");
-
-            var patchesExists = Directory.Exists(patchesDir);
-            var pluginsExists = Directory.Exists(pluginsDir);
-
-            if (!patchesExists && !pluginsExists)
-                return;
             Mods.Add(new Mod
             {
-                PluginsPath = pluginsExists ? pluginsDir : null,
-                PreloaderPatchesPath = patchesExists ? patchesDir : null,
+                PluginsPath = dir,
+                PreloaderPatchesPath = null,
                 ModDir = dir
             });
         }
