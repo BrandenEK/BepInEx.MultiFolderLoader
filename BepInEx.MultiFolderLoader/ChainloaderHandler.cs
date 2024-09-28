@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using BepInEx.Bootstrap;
 using HarmonyLib;
@@ -30,9 +31,11 @@ namespace BepInEx.MultiFolderLoader
         private static AssemblyDefinition TypeLoaderOnAssemblyResolve(object sender, AssemblyNameReference reference)
         {
             var name = new AssemblyName(reference.FullName);
-            foreach (var pluginDir in ModManager.GetPluginDirs())
-                if (Utility.TryResolveDllAssembly(name, pluginDir, TypeLoader.ReaderParameters, out var assembly))
-                    return assembly;
+
+            string path = Path.GetFullPath("Modding/plugins");
+            if (Utility.TryResolveDllAssembly(name, path, TypeLoader.ReaderParameters, out var assembly))
+                return assembly;
+
             return null;
         }
 
@@ -53,12 +56,11 @@ namespace BepInEx.MultiFolderLoader
                 return;
 
             MultiFolderLoader.Logger.LogInfo("Finding plugins from mods...");
-            foreach (var pluginDir in ModManager.GetPluginDirs())
-            {
-                var result = TypeLoader.FindPluginTypes(pluginDir, typeSelector, assemblyFilter, cacheName);
-                foreach (var kv in result)
-                    __result[kv.Key] = kv.Value;
-            }
+
+            string path = Path.GetFullPath("Modding/plugins");
+            var result = TypeLoader.FindPluginTypes(path, typeSelector, assemblyFilter, cacheName);
+            foreach (var kv in result)
+                __result[kv.Key] = kv.Value;
 
             shouldSaveCache = true;
             if (cacheName != null)
