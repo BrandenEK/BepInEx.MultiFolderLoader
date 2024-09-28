@@ -13,8 +13,7 @@ namespace BepInEx.MultiFolderLoader
 
         public static void Initialize()
         {
-            ModManager.Init();
-            PreloaderHandler.Init();
+            // Not used, exists so that this works as preloader patch
         }
 
         public static void Finish()
