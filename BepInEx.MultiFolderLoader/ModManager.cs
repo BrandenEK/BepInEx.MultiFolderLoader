@@ -40,12 +40,10 @@ namespace BepInEx.MultiFolderLoader
 
         private static void InitInternal()
         {
-            if (!InitPaths())
-                return;
-            foreach (var dir in ModDirs)
+            LoadFrom(new ModDirSpec
             {
-                LoadFrom(dir);
-            }
+                baseDir = "Modding/plugins"
+            });
         }
 
         private static void LoadFrom(ModDirSpec modDir)
@@ -61,95 +59,6 @@ namespace BepInEx.MultiFolderLoader
 
             // Also resolve assemblies like bepin does
             AppDomain.CurrentDomain.AssemblyResolve += ResolveModDirectories;
-        }
-
-        private static bool InitPaths()
-        {
-            try
-            {
-                var ini = GhettoIni.Read(Path.Combine(Paths.GameRootPath, CONFIG_NAME));
-                if (!ini.TryGetValue("MultiFolderLoader", out var mainSection))
-                {
-                    MultiFolderLoader.Logger.LogWarning(
-                        $"No [MultiFolderLoader] section in {CONFIG_NAME}, skipping loading mods...");
-                    return false;
-                }
-
-                InitSection(mainSection);
-
-                if (mainSection.Entries.TryGetValue("enableAdditionalDirectories", out var enableAdd) &&
-                    enableAdd.ToLower() == "true")
-                {
-                    foreach (var sectionName in ini.Keys.Where(sectionName =>
-                        sectionName.StartsWith("MultiFolderLoader_".ToLower())))
-                    {
-                        MultiFolderLoader.Logger.LogInfo(
-                            $"Loading additional section [{sectionName}] from {CONFIG_NAME}");
-                        InitSection(ini[sectionName]);
-                    }
-                }
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                MultiFolderLoader.Logger.LogWarning($"Failed to read {CONFIG_NAME}: {e}");
-                return false;
-            }
-        }
-
-        private static void InitSection(GhettoIni.Section section)
-        {
-            var spec = new ModDirSpec();
-            if (section.Entries.TryGetValue("baseDir", out var baseDir))
-            {
-                spec.baseDir = Path.GetFullPath(Environment.ExpandEnvironmentVariables(baseDir));
-            }
-            else
-            {
-                MultiFolderLoader.Logger.LogWarning(
-                    $"No [{section.Name}].baseDir found in {CONFIG_NAME}, no mods to load!");
-                return;
-            }
-
-            if (section.Entries.TryGetValue("disabledModsListPath", out var disabledModsListPath))
-            {
-                MultiFolderLoader.Logger.LogInfo(
-                    $"[{section.Name}].disabledModsListPath found in {CONFIG_NAME}, enabling disabled mods list");
-                spec.blockedMods = GetModList(Path.GetFullPath(Environment.ExpandEnvironmentVariables(disabledModsListPath)));
-            }
-
-            if (section.Entries.TryGetValue("enabledModsListPath", out var enabledModsListPath))
-            {
-                MultiFolderLoader.Logger.LogInfo(
-                    $"[{section.Name}].enabledModsListPath found in {CONFIG_NAME}, enabling enabled mods list");
-                spec.enabledMods = GetModList(Path.GetFullPath(Environment.ExpandEnvironmentVariables(enabledModsListPath)));
-            }
-
-            ModDirs.Add(spec);
-        }
-
-        private static HashSet<string> GetModList(string path)
-        {
-            try
-            {
-                if (!File.Exists(path))
-                {
-                    MultiFolderLoader.Logger.LogWarning($"Mod list {path} does not exist, skipping loading");
-                    return null;
-                }
-
-                var result = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-                foreach (var line in File.ReadAllLines(path))
-                    result.Add(line.Trim());
-                return result;
-            }
-            catch (Exception e)
-            {
-                MultiFolderLoader.Logger.LogWarning($"Failed to load list of disabled mods: {e}");
-            }
-
-            return null;
         }
 
         private static Assembly ResolveModDirectories(object sender, ResolveEventArgs args)
